@@ -1,0 +1,57 @@
+name: Check Webtoon Completions
+
+on:
+  schedule:
+    # Runs daily at 1:30 PM UTC = 10:00 PM KST = 7:00 PM IST
+    - cron: '30 13 * * *'
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Needed to commit watchlist state back
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run webtoon checker
+        id: checker
+        run: python src/check.py
+
+      - name: Send email notification
+        if: steps.checker.outputs.has_completions == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "🎉 웹툰 완결: ${{ steps.checker.outputs.completed_titles }}"
+          body: |
+            Your webtoon(s) just posted their final episode!
+
+            ${{ steps.checker.outputs.email_body }}
+
+            ---
+            Checked by naver-webtoon-notifier
+          to: ${{ secrets.NOTIFY_EMAIL }}
+          from: Webtoon Notifier <${{ secrets.EMAIL_USERNAME }}>
+
+      - name: Commit updated watchlist
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add watchlist.json
+          git diff --staged --quiet || git commit -m "Update watchlist state [skip ci]"
+          git push
