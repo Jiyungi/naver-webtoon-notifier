@@ -1,7 +1,13 @@
 """
 Notification Dispatcher
 Extensible notification system — add any channel you want.
-Currently supports: console, webhook, email (via SMTP), Slack.
+Currently supports: console, email (via SMTP), Telegram, Slack, webhook.
+
+Channel is selected automatically from environment variables:
+  TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID  → Telegram
+  EMAIL_USERNAME + EMAIL_PASSWORD        → Email (Gmail)
+  SLACK_BOT_TOKEN + SLACK_CHANNEL       → Slack
+Set whichever secrets you want in GitHub → both/all fire if multiple are set.
 """
 
 import json
@@ -193,60 +199,81 @@ class NotificationDispatcher:
 
 
 # ---------------------------------------------------------------------------
-# Factory — build dispatcher from config file
+# Telegram
 # ---------------------------------------------------------------------------
 
-def build_dispatcher_from_config(config_path: str = None) -> NotificationDispatcher:
-    """
-    Build a dispatcher from a JSON config file.
-    Config format:
-    {
-      "notifications": [
-        {"type": "console"},
-        {"type": "webhook", "url": "https://hooks.slack.com/..."},
-        {"type": "email", "smtp_host": "...", "smtp_port": 587,
-         "sender_email": "...", "sender_password": "...", "recipient_email": "..."},
-        {"type": "slack", "bot_token": "xoxb-...", "channel": "#webtoon-alerts"}
-      ]
-    }
-    """
-    if config_path is None:
-        config_path = os.path.join(os.path.dirname(__file__), "config.json")
+class TelegramNotifier(Notifier):
+    def __init__(self, bot_token: str, chat_id: str):
+        self.bot_token = bot_token
+        self.chat_id = chat_id
 
+    def send(self, result: DetectionResult) -> bool:
+        if not HAS_REQUESTS:
+            print("Error: 'requests' library needed for Telegram notifications")
+            return False
+        msg = self.format_message(result)
+        text = f"*{msg['title']}*\n\n{msg['body']}"
+        try:
+            resp = requests.post(
+                f"https://api.telegram.org/bot{self.bot_token}/sendMessage",
+                json={
+                    "chat_id": self.chat_id,
+                    "text": text,
+                    "parse_mode": "Markdown",
+                },
+                timeout=10,
+            )
+            data = resp.json()
+            if not data.get("ok"):
+                print(f"Telegram error: {data.get('description')}")
+            return data.get("ok", False)
+        except Exception as e:
+            print(f"Telegram error: {e}")
+            return False
+
+
+# ---------------------------------------------------------------------------
+# Factory — build dispatcher from environment variables
+# ---------------------------------------------------------------------------
+
+def build_dispatcher_from_env() -> NotificationDispatcher:
+    """
+    Auto-detect which notifiers to use based on environment variables.
+    Set the corresponding GitHub Secrets and the right channel fires.
+
+      Telegram : TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID
+      Email    : EMAIL_USERNAME + EMAIL_PASSWORD + NOTIFY_EMAIL (optional, defaults to sender)
+      Slack    : SLACK_BOT_TOKEN + SLACK_CHANNEL
+    """
     dispatcher = NotificationDispatcher()
 
-    if not os.path.exists(config_path):
-        # Default to console only
-        dispatcher.add(ConsoleNotifier())
-        return dispatcher
+    telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    telegram_chat  = os.environ.get("TELEGRAM_CHAT_ID")
+    if telegram_token and telegram_chat:
+        dispatcher.add(TelegramNotifier(bot_token=telegram_token, chat_id=telegram_chat))
+        print("Notifier: Telegram enabled")
 
-    with open(config_path, "r", encoding="utf-8") as f:
-        config = json.load(f)
+    email_user = os.environ.get("EMAIL_USERNAME")
+    email_pass = os.environ.get("EMAIL_PASSWORD")
+    if email_user and email_pass:
+        recipient = os.environ.get("NOTIFY_EMAIL", email_user)
+        dispatcher.add(EmailNotifier(
+            sender_email=email_user,
+            sender_password=email_pass,
+            recipient_email=recipient,
+        ))
+        print(f"Notifier: Email enabled → {recipient}")
 
-    for entry in config.get("notifications", []):
-        ntype = entry.get("type", "").lower()
-        if ntype == "console":
-            dispatcher.add(ConsoleNotifier())
-        elif ntype == "webhook":
-            dispatcher.add(WebhookNotifier(webhook_url=entry["url"]))
-        elif ntype == "email":
-            dispatcher.add(EmailNotifier(
-                smtp_host=entry.get("smtp_host", "smtp.gmail.com"),
-                smtp_port=entry.get("smtp_port", 587),
-                sender_email=entry.get("sender_email", ""),
-                sender_password=entry.get("sender_password", ""),
-                recipient_email=entry.get("recipient_email", ""),
-            ))
-        elif ntype == "slack":
-            dispatcher.add(SlackNotifier(
-                bot_token=entry.get("bot_token", ""),
-                channel=entry.get("channel", "#general"),
-            ))
-        else:
-            print(f"Unknown notification type: {ntype}")
+    slack_token   = os.environ.get("SLACK_BOT_TOKEN")
+    slack_channel = os.environ.get("SLACK_CHANNEL", "#general")
+    if slack_token:
+        dispatcher.add(SlackNotifier(bot_token=slack_token, channel=slack_channel))
+        print(f"Notifier: Slack enabled → {slack_channel}")
 
-    # Always include console as fallback
-    if not any(isinstance(n, ConsoleNotifier) for n in dispatcher.notifiers):
-        dispatcher.add(ConsoleNotifier())
+    # Always log to console
+    dispatcher.add(ConsoleNotifier())
+
+    if len(dispatcher.notifiers) == 1:
+        print("Notifier: No secrets configured — console only")
 
     return dispatcher

@@ -14,7 +14,7 @@ class DetectionResult:
     title_id: int
     title_name: str
     is_completed: bool
-    is_new_completion: bool   # True if this is a NEW completion (wasn't finished before)
+    is_new_completion: bool   # True if this is a new completion
     has_new_episode: bool     # True if there's a new episode since last check
     signals: list             # List of signal descriptions
     total_episodes: int
@@ -36,9 +36,10 @@ class DetectionResult:
             return "high"
 
     def summary(self) -> str:
+        status_str = "✅ COMPLETED" if self.is_completed else "📺 Ongoing"
         lines = [
             f"📖 {self.title_name}",
-            f"   Status: {'✅ COMPLETED' if self.is_completed else '📺 Ongoing'}",
+            f"   Status: {status_str}",
             f"   Episodes: {self.total_episodes}",
             f"   Latest: #{self.latest_ep_no} - {self.latest_ep_title}",
             f"   Confidence: {self.confidence} ({len(self.signals)} signals)",
@@ -65,12 +66,18 @@ def detect_completion(title_id: int, watchlist: Watchlist) -> DetectionResult:
     was_finished = entry.was_finished if entry else False
     last_ep_no = entry.last_episode_no if entry else 0
 
-    # Determine if this is a new completion
-    is_new_completion = status.finished and not was_finished
-
     # Determine if there's a new episode
     current_ep_no = status.latest_episode.no if status.latest_episode else 0
     has_new_episode = current_ep_no > last_ep_no
+
+    # Determine if this is a new completion.
+    # Episode title signals (e.g. "최종화", "에필로그") fire before the API
+    # sets finished=True, which matters because Naver paywall kicks in then.
+    ep_has_final_signal = bool(status.completion_signals)
+    is_new_completion = (
+        (status.finished and not was_finished)
+        or (has_new_episode and ep_has_final_signal and not was_finished)
+    )
 
     latest_ep_title = status.latest_episode.subtitle if status.latest_episode else ""
 
@@ -94,7 +101,7 @@ def detect_completion(title_id: int, watchlist: Watchlist) -> DetectionResult:
             last_episode_no=current_ep_no,
             last_episode_title=latest_ep_title,
             was_finished=status.finished,
-            notified=is_new_completion,  # Mark as notified if we just detected completion
+            notified=is_new_completion,  # Mark notified if completion detected
         )
 
     return result

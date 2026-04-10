@@ -82,6 +82,7 @@ FINAL_EPISODE_PATTERNS = [
     r"(?i)\bfinal\b",
     r"(?i)\bend\b",
     r"에필로그",
+    r"후기",
     r"시즌\s*완결",
 ]
 
