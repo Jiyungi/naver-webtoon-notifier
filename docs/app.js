@@ -14,6 +14,7 @@ const state = {
   selectedIds: new Set(),
   activeWeekday: "all",
   search: "",
+  trackedOnly: false,
 };
 
 const grid = document.getElementById("grid");
@@ -23,6 +24,8 @@ const weekdayFilters = document.getElementById("weekdayFilters");
 const selectedCount = document.getElementById("selectedCount");
 const createIssueButton = document.getElementById("createIssue");
 const clearSelectionButton = document.getElementById("clearSelection");
+const viewAllButton = document.getElementById("viewAll");
+const viewTrackedButton = document.getElementById("viewTracked");
 
 function getRepoContext() {
   const owner = window.location.hostname.split(".")[0];
@@ -76,8 +79,14 @@ function filteredCatalog() {
   return state.catalog.filter((entry) => {
     const weekdayMatches = state.activeWeekday === "all" || entry.weekday === state.activeWeekday;
     const searchMatches = !state.search || entry.title_name.toLowerCase().includes(state.search.toLowerCase());
-    return weekdayMatches && searchMatches;
+    const trackedMatches = !state.trackedOnly || state.trackedIds.has(entry.title_id);
+    return weekdayMatches && searchMatches && trackedMatches;
   });
+}
+
+function updateViewFilterUI() {
+  viewAllButton.classList.toggle("active", !state.trackedOnly);
+  viewTrackedButton.classList.toggle("active", state.trackedOnly);
 }
 
 function render() {
@@ -152,6 +161,18 @@ clearSelectionButton.addEventListener("click", () => {
   render();
 });
 
+viewAllButton.addEventListener("click", () => {
+  state.trackedOnly = false;
+  updateViewFilterUI();
+  render();
+});
+
+viewTrackedButton.addEventListener("click", () => {
+  state.trackedOnly = true;
+  updateViewFilterUI();
+  render();
+});
+
 createIssueButton.addEventListener("click", () => {
   const selectedEntries = state.catalog.filter((entry) => state.selectedIds.has(entry.title_id));
   if (!selectedEntries.length) {
@@ -164,6 +185,7 @@ loadData()
   .then(() => {
     buildWeekdayFilters();
     updateSelectionUI();
+    updateViewFilterUI();
     render();
   })
   .catch((error) => {

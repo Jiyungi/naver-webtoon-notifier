@@ -68,7 +68,6 @@ Actions 탭에서 아래 워크플로를 활성화합니다.
 
 - `Check Webtoon Completions`
 - `Process Subscription Request`
-- `Check Telegram Commands`
 
 ### 4. Turn on GitHub Pages
 
@@ -100,18 +99,7 @@ Actions 에서 `Check Webtoon Completions` 를 한 번 수동 실행하세요.
 3. `Track Selected` 를 누릅니다.
 4. 열리는 GitHub issue 화면을 그대로 제출합니다.
 5. 자기 저장소의 `Process Subscription Request` 액션이 `watchlist.json` 에 자동 반영합니다.
-
-## Telegram Commands
-
-현재 텔레그램에서 아래 명령을 보낼 수 있습니다.
-
-- `/watchlist` : 현재 워치리스트 보기
-- `/help` : 도움말 보기
-
-주의:
-
-- 이 저장소는 상시 봇 서버가 아니라 GitHub Actions polling 방식입니다.
-- 그래서 `/watchlist` 응답은 즉시가 아니라 보통 몇 분 안에 도착합니다.
+6. Pages 에서 `내 워치리스트` 버튼을 누르면 현재 추적 중인 작품만 따로 볼 수 있습니다.
 
 ## Optional Local CLI
 
@@ -148,12 +136,6 @@ python src/manage.py check
 - `watchlist.json` 에 추가
 - 결과 코멘트를 남기고 issue 를 닫음
 
-[check-telegram-commands.yml](/Users/jiyunkim/Desktop/courses/naver-webtoon-notifier/.github/workflows/check-telegram-commands.yml:1)
-
-- 5분마다 텔레그램 명령 확인
-- `/watchlist`, `/help` 처리
-- 마지막으로 읽은 update offset 을 `telegram_state.json` 에 저장
-
 ## Project Structure
 
 ```text
@@ -161,7 +143,6 @@ src/
 ├── catalog.py                    # 요일별 카탈로그 + 썸네일 수집
 ├── export_catalog.py             # docs/catalog.json 생성
 ├── process_subscription_issue.py # visual picker issue 처리
-├── process_telegram_commands.py  # Telegram 명령 polling 처리
 ├── manage.py                     # 로컬 CLI
 ├── naver_api.py                  # 작품 상태 / 회차 정보 조회
 ├── detector.py                   # 완결 감지 로직
@@ -180,6 +161,6 @@ docs/
 ## Notes
 
 - `catalog.json` 은 Actions 가 생성하는 정적 데이터입니다.
+- `tracked.json` 은 현재 워치리스트의 `title_id` 목록입니다.
 - visual picker 는 서버 없이 GitHub Pages 에서 동작합니다.
 - 현재 구조는 비용 0원에 가깝게 유지하면서, self-serve template 으로 배포하기 좋은 형태입니다.
-- 텔레그램 명령 응답은 GitHub Actions 스케줄에 의존하므로 몇 분 지연될 수 있습니다.

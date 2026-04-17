@@ -9,18 +9,21 @@
   <body>
     <main class="page">
       <section class="hero">
-        <p class="eyebrow">Naver Webtoon Notifier Template</p>
-        <h1>이 저장소에서 감시할 웹툰을 고르세요.</h1>
+        <p class="eyebrow">Naver Webtoon Notifier</p>
+        <h1>완결 알림 받을 웹툰을 골라보세요.</h1>
         <p class="lede">
-          이 페이지는 현재 저장소의 감시 목록을 고르는 화면입니다.
-          작품을 선택한 뒤 <span>Track Selected</span> 를 누르면 이 저장소에 issue 가 생성되고,
-          Actions 가 자동으로 감시 목록에 등록합니다.
+          요일별로 둘러보거나 검색해서 작품을 선택하면
+          <span>추가하기</span> 버튼으로 워치리스트에 등록할 수 있습니다.
         </p>
       </section>
 
       <section class="controls">
         <input id="search" type="search" placeholder="제목 검색">
         <div id="weekdayFilters" class="weekday-filters"></div>
+        <div class="view-filters">
+          <button id="viewAll" class="view-chip active" type="button">전체 보기</button>
+          <button id="viewTracked" class="view-chip" type="button">내 워치리스트</button>
+        </div>
       </section>
 
       <section class="selection-bar">
@@ -28,8 +31,8 @@
           <strong id="selectedCount">0</strong> selected
         </div>
         <div class="selection-actions">
-          <button id="clearSelection" class="ghost">Clear</button>
-          <button id="createIssue" class="primary" disabled>Track Selected</button>
+          <button id="clearSelection" class="ghost">선택 해제</button>
+          <button id="createIssue" class="primary" disabled>추가하기</button>
         </div>
       </section>
 
