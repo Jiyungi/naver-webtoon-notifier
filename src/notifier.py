@@ -39,21 +39,19 @@ class Notifier(ABC):
 
     def format_message(self, result: DetectionResult) -> dict:
         """Format the detection result into title + body."""
-        title = f"🎉 웹툰 완결: {result.title_name}"
+        title = f"완결 알림: {result.title_name}"
         body_lines = [
-            f"「{result.title_name}」 has reached its final episode!",
+            f"🎉 {result.title_name} 이(가) 완결됐어요.",
             f"",
-            f"📊 Total Episodes: {result.total_episodes}",
-            f"📝 Final Episode: #{result.latest_ep_no} - {result.latest_ep_title}",
-            f"🔗 Read it: {result.webtoon_url}",
-            f"",
-            f"Detection confidence: {result.confidence} ({len(result.signals)} signals)",
+            f"마지막 화: #{result.latest_ep_no} {result.latest_ep_title}",
+            f"총 화수: {result.total_episodes}",
+            f"보러 가기: {result.webtoon_url}",
         ]
         if result.signals:
             body_lines.append("")
-            body_lines.append("Signals detected:")
+            body_lines.append("감지 기준:")
             for sig in result.signals:
-                body_lines.append(f"  • {sig}")
+                body_lines.append(f"• {sig}")
         return {"title": title, "body": "\n".join(body_lines)}
 
 
