@@ -12,21 +12,21 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from watchlist import Watchlist
 from detector import DetectionResult, check_all, get_new_completions
-from notifier import build_dispatcher_from_env
+from notifier import TelegramNotifier, TelegramTestNotifier, build_dispatcher_from_env
 
 
 def build_test_result() -> DetectionResult:
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     return DetectionResult(
         title_id=0,
-        title_name="Telegram Test",
+        title_name="텔레그램 알림 테스트",
         is_completed=True,
         is_new_completion=True,
         has_new_episode=False,
-        signals=[f"Manual workflow test at {timestamp}"],
+        signals=[timestamp],
         total_episodes=1,
         latest_ep_no=1,
-        latest_ep_title="Integration Test Message",
+        latest_ep_title="수동 테스트 메시지",
         webtoon_url="https://github.com",
     )
 
@@ -34,7 +34,15 @@ def build_test_result() -> DetectionResult:
 def main():
     if os.environ.get("TEST_NOTIFICATION", "").lower() == "true":
         print("Running notification test mode.\n")
-        dispatcher = build_dispatcher_from_env()
+        dispatcher = build_dispatcher_from_env().filter_by_type((TelegramNotifier,))
+        if not dispatcher.notifiers:
+            print("Telegram notifier is not configured.")
+            return
+        dispatcher.notifiers = [
+            TelegramTestNotifier(notifier.bot_token, notifier.chat_id)
+            if isinstance(notifier, TelegramNotifier) else notifier
+            for notifier in dispatcher.notifiers
+        ]
         result = build_test_result()
         outcomes = dispatcher.notify(result)
         for channel, success in outcomes.items():

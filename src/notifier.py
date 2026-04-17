@@ -197,6 +197,14 @@ class NotificationDispatcher:
                 print(f"Error in {name}: {e}")
         return outcomes
 
+    def filter_by_type(self, allowed_types: tuple[type, ...]) -> "NotificationDispatcher":
+        """Return a new dispatcher containing only the selected notifier types."""
+        filtered = NotificationDispatcher()
+        for notifier in self.notifiers:
+            if isinstance(notifier, allowed_types):
+                filtered.add(notifier)
+        return filtered
+
 
 # ---------------------------------------------------------------------------
 # Telegram
@@ -230,6 +238,18 @@ class TelegramNotifier(Notifier):
         except Exception as e:
             print(f"Telegram error: {e}")
             return False
+
+
+class TelegramTestNotifier(TelegramNotifier):
+    def format_message(self, result: DetectionResult) -> dict:
+        return {
+            "title": "텔레그램 알림 테스트",
+            "body": (
+                "GitHub Actions에서 수동 테스트 메시지를 보냈습니다.\n\n"
+                f"실행 시각: {result.signals[0]}\n"
+                "이 메시지가 보이면 텔레그램 연동이 정상입니다."
+            ),
+        }
 
 
 # ---------------------------------------------------------------------------
