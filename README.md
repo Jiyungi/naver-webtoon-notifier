@@ -94,6 +94,16 @@ To remove titles:
 3. Click `Remove`.
 4. Submit the generated GitHub issue.
 
+### Screenshots
+
+Main picker view:
+
+![Main picker view](docs/assets/picker-home.png)
+
+My Watchlist view:
+
+![My Watchlist view](docs/assets/picker-watchlist.png)
+
 ## When Telegram Messages Are Sent
 
 Telegram is used for completion alerts, not for adding titles.

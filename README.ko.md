@@ -94,6 +94,16 @@ GitHub Pages 화면에서:
 3. `제거하기` 를 누릅니다.
 4. 생성된 issue 를 제출합니다.
 
+### 스크린샷
+
+메인 선택 화면:
+
+![메인 선택 화면](docs/assets/picker-home.png)
+
+내 워치리스트 화면:
+
+![내 워치리스트 화면](docs/assets/picker-watchlist.png)
+
 ## 텔레그램 메시지는 언제 오나
 
 텔레그램은 “추가 확인용”이 아니라 “완결 알림용”입니다.
