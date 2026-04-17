@@ -105,6 +105,9 @@ function filteredCatalog() {
 }
 
 function updateViewFilterUI() {
+  if (!viewAllButton || !viewTrackedButton) {
+    return;
+  }
   viewAllButton.classList.toggle("active", !state.trackedOnly);
   viewTrackedButton.classList.toggle("active", state.trackedOnly);
 }
@@ -177,17 +180,21 @@ clearSelectionButton.addEventListener("click", () => {
   render();
 });
 
-viewAllButton.addEventListener("click", () => {
-  state.trackedOnly = false;
-  updateViewFilterUI();
-  render();
-});
+if (viewAllButton) {
+  viewAllButton.addEventListener("click", () => {
+    state.trackedOnly = false;
+    updateViewFilterUI();
+    render();
+  });
+}
 
-viewTrackedButton.addEventListener("click", () => {
-  state.trackedOnly = true;
-  updateViewFilterUI();
-  render();
-});
+if (viewTrackedButton) {
+  viewTrackedButton.addEventListener("click", () => {
+    state.trackedOnly = true;
+    updateViewFilterUI();
+    render();
+  });
+}
 
 createIssueButton.addEventListener("click", () => {
   const selectedEntries = state.catalog.filter((entry) => state.selectedIds.has(entry.title_id));
