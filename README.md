@@ -2,76 +2,59 @@
 
 [한국어 README](./README.ko.md)
 
-A self-serve template for tracking Naver Webtoons in your own GitHub repository and receiving completion alerts in your own Telegram chat.
+Track Naver Webtoons in your own GitHub repository and get Telegram alerts when a tracked series finishes.
 
-This is not a centralized hosted service. Each user runs the flow in their own repo:
+This repo is meant to be copied and used in your own account. It is not a centralized hosted service.
 
-- browse the catalog through GitHub Pages
-- add or remove tracked titles in their own repo
-- run scheduled checks through their own GitHub Actions
-- receive alerts in their own Telegram chat
+## What This Repo Does
 
-## Why This Shape
+After setup, your copy of this repo will:
 
-This setup works well when:
+- show a visual webtoon picker on GitHub Pages
+- save your tracked titles in `watchlist.json`
+- check those titles with GitHub Actions
+- send a Telegram message when a tracked webtoon is completed
 
-- you want near-zero operating cost
-- you do not want to run a server
-- each user only needs alerts for their own watchlist
-
-This setup is not a good fit when:
-
-- you want to manage many users from one central repo
-- you need accounts, a database, or a multi-user SaaS
-- you need admin tooling, abuse controls, or per-user permissions
-
-## Flow
+## How It Works
 
 ```text
-Your GitHub Pages
-    │
-    ├─ visual catalog / search / weekday filters
-    ├─ title selection
-    └─ GitHub issue creation
+GitHub Pages
+  -> you choose webtoons
+  -> GitHub issue is created
 
-Your Process Subscription Request
-    │
-    └─ updates watchlist.json
+Process Subscription Request
+  -> updates watchlist.json
 
-Your Check Webtoon Completions
-    │
-    ├─ checks Naver Webtoon status
-    ├─ detects completion signals
-    ├─ updates watchlist.json
-    └─ sends Telegram notifications
+Check Webtoon Completions
+  -> checks tracked titles
+  -> updates state
+  -> sends Telegram alerts
 ```
 
-## Quick Start
+## Setup
 
-### 1. Create your own copy
+### 1. Copy the repo
 
-Use one of:
+Use one of these:
 
 - `Use this template`
 - `Fork`
 
-Then configure the copied repository.
-
 ### 2. Add Telegram secrets
 
-Set these GitHub repository secrets:
+In your copied repository, add these GitHub secrets:
 
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
 
 ### 3. Enable workflows
 
-Enable these workflows in the Actions tab:
+In the Actions tab, enable:
 
 - `Check Webtoon Completions`
 - `Process Subscription Request`
 
-### 4. Turn on GitHub Pages
+### 4. Enable GitHub Pages
 
 In `Settings -> Pages`:
 
@@ -79,35 +62,52 @@ In `Settings -> Pages`:
 - Branch: `main`
 - Folder: `/docs`
 
-After deployment, your site will be available at:
+Your site will be available at:
 
 `https://<your-name>.github.io/<your-repo>/`
 
-### 5. Initialize catalog data
+### 5. Initialize the catalog
 
-Manually run `Check Webtoon Completions` once.
+Run `Check Webtoon Completions` once manually.
 
-That first run populates:
+That first run generates:
 
 - `docs/catalog.json`
 - `docs/tracked.json`
 
-Without that run, the visual picker will load but the catalog will be empty.
+Without this step, the page will load but the webtoon list will be empty.
 
-### 6. Manage titles visually
+## Using the Web UI
 
 On the GitHub Pages site:
 
 1. Browse by weekday or search by title.
-2. Select one or more titles.
-3. Click `Add` or `Remove`.
+2. Select one or more webtoons.
+3. Click `Add` to track them.
 4. Submit the generated GitHub issue.
-5. `Process Subscription Request` updates `watchlist.json`.
-6. Use `My Watchlist` to view only tracked titles.
+5. Wait for `Process Subscription Request` to update `watchlist.json`.
+
+To remove titles:
+
+1. Open `My Watchlist`.
+2. Select one or more tracked titles.
+3. Click `Remove`.
+4. Submit the generated GitHub issue.
+
+## When Telegram Messages Are Sent
+
+Telegram is used for completion alerts, not for adding titles.
+
+You get a Telegram message when:
+
+- a tracked webtoon is detected as completed
+- or you manually run the notification test
+
+You do not get a Telegram message immediately when adding a title on the web page.
 
 ## Optional Local CLI
 
-If you want local management tools too:
+If you prefer local commands too:
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/naver-webtoon-notifier.git
@@ -116,43 +116,27 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-python src/manage.py add 822557
 python src/manage.py browse mon
-python src/manage.py search "Heart"
-python src/manage.py list
+python src/manage.py search "webtoon title"
+python src/manage.py add 822557
 python src/manage.py remove 822557
+python src/manage.py list
 python src/manage.py check
 ```
 
-## Workflows
-
-[check-webtoons.yml](/Users/jiyunkim/Desktop/courses/naver-webtoon-notifier/.github/workflows/check-webtoons.yml:1)
-
-- runs daily at `13:30 UTC`
-- checks active entries in `watchlist.json`
-- sends Telegram notifications for new completions
-- refreshes `docs/catalog.json` and `docs/tracked.json`
-
-[process-subscription-request.yml](/Users/jiyunkim/Desktop/courses/naver-webtoon-notifier/.github/workflows/process-subscription-request.yml:1)
-
-- detects `subscription-request` issues
-- parses selected `titleId` values and request type
-- adds or removes entries in `watchlist.json`
-- comments on the issue and closes it
-
-## Project Structure
+## Main Files
 
 ```text
 src/
-├── catalog.py                    # Catalog + thumbnail scraping
-├── export_catalog.py             # Builds docs/catalog.json
-├── process_subscription_issue.py # Handles add/remove issue requests
-├── manage.py                     # Local CLI
-├── naver_api.py                  # Series status / episode data
-├── detector.py                   # Completion detection logic
-├── notifier.py                   # Telegram / email / Slack notifier
-├── check.py                      # Daily checker entrypoint
-└── watchlist.py                  # watchlist.json persistence
+├── catalog.py
+├── export_catalog.py
+├── process_subscription_issue.py
+├── manage.py
+├── naver_api.py
+├── detector.py
+├── notifier.py
+├── check.py
+└── watchlist.py
 
 docs/
 ├── index.html
@@ -164,7 +148,6 @@ docs/
 
 ## Notes
 
-- `catalog.json` is generated by GitHub Actions.
-- `tracked.json` contains the currently tracked `title_id` list.
-- the visual picker runs entirely on GitHub Pages
-- this template is optimized for low-cost, self-serve usage
+- `catalog.json` is generated by GitHub Actions
+- `tracked.json` contains the currently tracked `title_id` values
+- the whole setup is optimized for low-cost, self-serve use
