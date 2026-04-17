@@ -128,9 +128,10 @@ function render() {
 }
 
 async function loadData() {
+  const cacheBust = `v=${Date.now()}`;
   const [catalogResponse, trackedResponse] = await Promise.all([
-    fetch("./catalog.json"),
-    fetch("./tracked.json"),
+    fetch(`./catalog.json?${cacheBust}`, { cache: "no-store" }),
+    fetch(`./tracked.json?${cacheBust}`, { cache: "no-store" }),
   ]);
   const [catalogPayload, trackedPayload] = await Promise.all([
     catalogResponse.json(),
