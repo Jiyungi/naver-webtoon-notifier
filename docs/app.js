@@ -1,0 +1,170 @@
+const WEEKDAY_LABELS = {
+  mon: "월요일",
+  tue: "화요일",
+  wed: "수요일",
+  thu: "목요일",
+  fri: "금요일",
+  sat: "토요일",
+  sun: "일요일",
+};
+
+const state = {
+  catalog: [],
+  trackedIds: new Set(),
+  selectedIds: new Set(),
+  activeWeekday: "all",
+  search: "",
+};
+
+const grid = document.getElementById("grid");
+const template = document.getElementById("cardTemplate");
+const searchInput = document.getElementById("search");
+const weekdayFilters = document.getElementById("weekdayFilters");
+const selectedCount = document.getElementById("selectedCount");
+const createIssueButton = document.getElementById("createIssue");
+const clearSelectionButton = document.getElementById("clearSelection");
+
+function getRepoContext() {
+  const owner = window.location.hostname.split(".")[0];
+  const repo = window.location.pathname.split("/").filter(Boolean)[0] || "";
+  return { owner, repo };
+}
+
+function issueUrlForSelection(entries) {
+  const { owner, repo } = getRepoContext();
+  const issueBase = `https://github.com/${owner}/${repo}/issues/new`;
+  const payload = { title_ids: entries.map((entry) => entry.title_id) };
+  const titles = entries.map((entry) => `- ${entry.title_name} (${entry.title_id})`).join("\n");
+  const body = [
+    "Visual catalog subscription request.",
+    "",
+    titles,
+    "",
+    `<!-- subscription-request ${JSON.stringify(payload)} -->`,
+  ].join("\n");
+  const params = new URLSearchParams({
+    title: `Track ${entries.length} webtoon${entries.length > 1 ? "s" : ""}`,
+    labels: "subscription-request",
+    body,
+  });
+  return `${issueBase}?${params.toString()}`;
+}
+
+function updateSelectionUI() {
+  selectedCount.textContent = String(state.selectedIds.size);
+  createIssueButton.disabled = state.selectedIds.size === 0;
+}
+
+function buildWeekdayFilters() {
+  const weekdays = [{ code: "all", label: "전체" }, ...Object.entries(WEEKDAY_LABELS).map(([code, label]) => ({ code, label }))];
+  weekdayFilters.innerHTML = "";
+  weekdays.forEach(({ code, label }) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `weekday-chip${state.activeWeekday === code ? " active" : ""}`;
+    button.textContent = label;
+    button.addEventListener("click", () => {
+      state.activeWeekday = code;
+      buildWeekdayFilters();
+      render();
+    });
+    weekdayFilters.appendChild(button);
+  });
+}
+
+function filteredCatalog() {
+  return state.catalog.filter((entry) => {
+    const weekdayMatches = state.activeWeekday === "all" || entry.weekday === state.activeWeekday;
+    const searchMatches = !state.search || entry.title_name.toLowerCase().includes(state.search.toLowerCase());
+    return weekdayMatches && searchMatches;
+  });
+}
+
+function render() {
+  grid.innerHTML = "";
+  const entries = filteredCatalog();
+
+  entries.forEach((entry) => {
+    const fragment = template.content.cloneNode(true);
+    const card = fragment.querySelector(".card");
+    const button = fragment.querySelector(".card-button");
+    const image = fragment.querySelector(".thumb");
+    const title = fragment.querySelector(".title");
+    const weekday = fragment.querySelector(".weekday");
+    const tracked = fragment.querySelector(".tracked");
+    const meta = fragment.querySelector(".meta");
+
+    image.src = entry.thumbnail_url || "";
+    image.alt = entry.title_name;
+    title.textContent = entry.title_name;
+    weekday.textContent = WEEKDAY_LABELS[entry.weekday] || entry.weekday;
+    meta.textContent = `ID ${entry.title_id}`;
+
+    const isTracked = state.trackedIds.has(entry.title_id);
+    if (isTracked) {
+      tracked.classList.remove("hidden");
+    }
+
+    if (state.selectedIds.has(entry.title_id)) {
+      card.classList.add("selected");
+    }
+
+    button.addEventListener("click", () => {
+      if (isTracked) {
+        return;
+      }
+      if (state.selectedIds.has(entry.title_id)) {
+        state.selectedIds.delete(entry.title_id);
+        card.classList.remove("selected");
+      } else {
+        state.selectedIds.add(entry.title_id);
+        card.classList.add("selected");
+      }
+      updateSelectionUI();
+    });
+
+    grid.appendChild(fragment);
+  });
+}
+
+async function loadData() {
+  const [catalogResponse, trackedResponse] = await Promise.all([
+    fetch("./catalog.json"),
+    fetch("./tracked.json"),
+  ]);
+  const [catalogPayload, trackedPayload] = await Promise.all([
+    catalogResponse.json(),
+    trackedResponse.json(),
+  ]);
+  state.catalog = catalogPayload.webtoons || [];
+  state.trackedIds = new Set(trackedPayload.title_ids || []);
+}
+
+searchInput.addEventListener("input", (event) => {
+  state.search = event.target.value.trim();
+  render();
+});
+
+clearSelectionButton.addEventListener("click", () => {
+  state.selectedIds.clear();
+  updateSelectionUI();
+  render();
+});
+
+createIssueButton.addEventListener("click", () => {
+  const selectedEntries = state.catalog.filter((entry) => state.selectedIds.has(entry.title_id));
+  if (!selectedEntries.length) {
+    return;
+  }
+  window.open(issueUrlForSelection(selectedEntries), "_blank", "noopener,noreferrer");
+});
+
+loadData()
+  .then(() => {
+    buildWeekdayFilters();
+    updateSelectionUI();
+    render();
+  })
+  .catch((error) => {
+    grid.innerHTML = `<p>카탈로그를 불러오지 못했습니다: ${error.message}</p>`;
+  });
