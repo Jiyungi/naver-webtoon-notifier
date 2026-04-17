@@ -138,9 +138,6 @@ button.ghost {
 
 .card {
   min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .card-button {
@@ -154,18 +151,6 @@ button.ghost {
   box-shadow: var(--shadow);
   overflow: hidden;
   transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
-}
-
-.card-action {
-  width: 100%;
-  border-radius: 18px;
-  padding: 10px 14px;
-  background: rgba(255, 252, 246, 0.92);
-}
-
-.card-action.remove {
-  border-color: rgba(212, 79, 49, 0.18);
-  color: var(--accent-dark);
 }
 
 .card-button:hover {

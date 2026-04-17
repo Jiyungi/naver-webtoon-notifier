@@ -100,7 +100,7 @@ Actions 에서 `Check Webtoon Completions` 를 한 번 수동 실행하세요.
 4. 열리는 GitHub issue 화면을 그대로 제출합니다.
 5. 자기 저장소의 `Process Subscription Request` 액션이 `watchlist.json` 에 자동 반영합니다.
 6. Pages 에서 `내 워치리스트` 버튼을 누르면 현재 추적 중인 작품만 따로 볼 수 있습니다.
-7. `내 워치리스트` 화면의 제거 버튼으로 언제든 감시 목록에서 뺄 수 있습니다.
+7. 여러 작품을 한 번에 선택해 `추가하기` 또는 `제거하기` 요청을 만들 수 있습니다.
 
 ## Optional Local CLI
 

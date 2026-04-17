@@ -56,8 +56,26 @@ function issueUrlForRequest(entries, action) {
 }
 
 function updateSelectionUI() {
+  const selectedEntries = state.catalog.filter((entry) => state.selectedIds.has(entry.title_id));
+  const trackedCount = selectedEntries.filter((entry) => state.trackedIds.has(entry.title_id)).length;
+  const untrackedCount = selectedEntries.length - trackedCount;
+
   selectedCount.textContent = String(state.selectedIds.size);
-  createIssueButton.disabled = state.selectedIds.size === 0;
+
+  if (selectedEntries.length === 0) {
+    createIssueButton.disabled = true;
+    createIssueButton.textContent = "추가하기";
+    return;
+  }
+
+  if (trackedCount > 0 && untrackedCount > 0) {
+    createIssueButton.disabled = true;
+    createIssueButton.textContent = "추가/제거는 따로 선택";
+    return;
+  }
+
+  createIssueButton.disabled = false;
+  createIssueButton.textContent = trackedCount > 0 ? "제거하기" : "추가하기";
 }
 
 function buildWeekdayFilters() {
@@ -104,8 +122,6 @@ function render() {
     const weekday = fragment.querySelector(".weekday");
     const tracked = fragment.querySelector(".tracked");
     const meta = fragment.querySelector(".meta");
-    const actionButton = fragment.querySelector(".card-action");
-
     image.src = entry.thumbnail_url || "";
     image.alt = entry.title_name;
     title.textContent = entry.title_name;
@@ -115,14 +131,6 @@ function render() {
     const isTracked = state.trackedIds.has(entry.title_id);
     if (isTracked) {
       tracked.classList.remove("hidden");
-      actionButton.classList.remove("hidden");
-      actionButton.classList.add("remove");
-      actionButton.textContent = "워치리스트에서 제거";
-      actionButton.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        window.open(issueUrlForRequest([entry], "remove"), "_blank", "noopener,noreferrer");
-      });
     }
 
     if (state.selectedIds.has(entry.title_id)) {
@@ -130,9 +138,6 @@ function render() {
     }
 
     button.addEventListener("click", () => {
-      if (isTracked) {
-        return;
-      }
       if (state.selectedIds.has(entry.title_id)) {
         state.selectedIds.delete(entry.title_id);
         card.classList.remove("selected");
@@ -189,7 +194,9 @@ createIssueButton.addEventListener("click", () => {
   if (!selectedEntries.length) {
     return;
   }
-  window.open(issueUrlForRequest(selectedEntries, "add"), "_blank", "noopener,noreferrer");
+  const trackedCount = selectedEntries.filter((entry) => state.trackedIds.has(entry.title_id)).length;
+  const action = trackedCount > 0 ? "remove" : "add";
+  window.open(issueUrlForRequest(selectedEntries, action), "_blank", "noopener,noreferrer");
 });
 
 loadData()
