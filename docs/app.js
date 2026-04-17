@@ -33,20 +33,22 @@ function getRepoContext() {
   return { owner, repo };
 }
 
-function issueUrlForSelection(entries) {
+function issueUrlForRequest(entries, action) {
   const { owner, repo } = getRepoContext();
   const issueBase = `https://github.com/${owner}/${repo}/issues/new`;
-  const payload = { title_ids: entries.map((entry) => entry.title_id) };
+  const payload = { action, title_ids: entries.map((entry) => entry.title_id) };
   const titles = entries.map((entry) => `- ${entry.title_name} (${entry.title_id})`).join("\n");
   const body = [
-    "Visual catalog subscription request.",
+    action === "remove" ? "Visual catalog removal request." : "Visual catalog subscription request.",
     "",
     titles,
     "",
     `<!-- subscription-request ${JSON.stringify(payload)} -->`,
   ].join("\n");
   const params = new URLSearchParams({
-    title: `Track ${entries.length} webtoon${entries.length > 1 ? "s" : ""}`,
+    title: action === "remove"
+      ? `Remove ${entries.length} webtoon${entries.length > 1 ? "s" : ""}`
+      : `Track ${entries.length} webtoon${entries.length > 1 ? "s" : ""}`,
     labels: "subscription-request",
     body,
   });
@@ -102,6 +104,7 @@ function render() {
     const weekday = fragment.querySelector(".weekday");
     const tracked = fragment.querySelector(".tracked");
     const meta = fragment.querySelector(".meta");
+    const actionButton = fragment.querySelector(".card-action");
 
     image.src = entry.thumbnail_url || "";
     image.alt = entry.title_name;
@@ -112,6 +115,14 @@ function render() {
     const isTracked = state.trackedIds.has(entry.title_id);
     if (isTracked) {
       tracked.classList.remove("hidden");
+      actionButton.classList.remove("hidden");
+      actionButton.classList.add("remove");
+      actionButton.textContent = "워치리스트에서 제거";
+      actionButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        window.open(issueUrlForRequest([entry], "remove"), "_blank", "noopener,noreferrer");
+      });
     }
 
     if (state.selectedIds.has(entry.title_id)) {
@@ -178,7 +189,7 @@ createIssueButton.addEventListener("click", () => {
   if (!selectedEntries.length) {
     return;
   }
-  window.open(issueUrlForSelection(selectedEntries), "_blank", "noopener,noreferrer");
+  window.open(issueUrlForRequest(selectedEntries, "add"), "_blank", "noopener,noreferrer");
 });
 
 loadData()

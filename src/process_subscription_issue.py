@@ -34,20 +34,23 @@ def github_api_request(url: str, method: str = "GET", payload: dict | None = Non
         return json.loads(body) if body else {}
 
 
-def extract_title_ids(body: str) -> list[int]:
+def extract_request(body: str) -> tuple[str, list[int]]:
     match = MARKER_PATTERN.search(body or "")
     if not match:
-        return []
+        return "add", []
     payload = json.loads(match.group(1))
-    return [int(title_id) for title_id in payload.get("title_ids", [])]
+    action = payload.get("action", "add")
+    title_ids = [int(title_id) for title_id in payload.get("title_ids", [])]
+    return action, title_ids
 
 
-def build_comment(added: list[str], skipped: list[str], errors: list[str]) -> str:
+def build_comment(action: str, changed: list[str], skipped: list[str], errors: list[str]) -> str:
+    verb = "Removed" if action == "remove" else "Added"
     lines = ["Visual catalog request processed."]
-    if added:
+    if changed:
         lines.append("")
-        lines.append("Added:")
-        lines.extend(f"- {item}" for item in added)
+        lines.append(f"{verb}:")
+        lines.extend(f"- {item}" for item in changed)
     if skipped:
         lines.append("")
         lines.append("Skipped:")
@@ -69,7 +72,7 @@ def main():
     issue = event["issue"]
     issue_number = issue["number"]
     issue_body = issue.get("body", "")
-    title_ids = extract_title_ids(issue_body)
+    action, title_ids = extract_request(issue_body)
 
     if not title_ids:
         comment = "No valid title IDs were found in this request."
@@ -86,12 +89,20 @@ def main():
         return
 
     watchlist = Watchlist()
-    added: list[str] = []
+    changed: list[str] = []
     skipped: list[str] = []
     errors: list[str] = []
 
     for title_id in title_ids:
         existing = watchlist.get(title_id)
+        if action == "remove":
+            if not existing:
+                skipped.append(f"{title_id} is not currently tracked")
+                continue
+            watchlist.remove(title_id)
+            changed.append(f"{existing.title_name} ({title_id})")
+            continue
+
         if existing:
             skipped.append(f"{existing.title_name} ({title_id}) already tracked")
             continue
@@ -107,9 +118,9 @@ def main():
             continue
 
         watchlist.add(title_id, title_name)
-        added.append(f"{title_name} ({title_id})")
+        changed.append(f"{title_name} ({title_id})")
 
-    comment = build_comment(added, skipped, errors)
+    comment = build_comment(action, changed, skipped, errors)
     github_api_request(
         f"https://api.github.com/repos/{repo}/issues/{issue_number}/comments",
         method="POST",
