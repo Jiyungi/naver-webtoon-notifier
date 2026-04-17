@@ -4,7 +4,13 @@ on:
   schedule:
     # Runs daily at 1:30 PM UTC = 10:00 PM KST = 7:00 PM IST
     - cron: '30 13 * * *'
-  workflow_dispatch:  # Allows manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      test_notification:
+        description: Send a test notification through all configured channels
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   check:
@@ -26,6 +32,7 @@ jobs:
 
       - name: Run webtoon checker
         env:
+          TEST_NOTIFICATION: ${{ github.event.inputs.test_notification || 'false' }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
@@ -36,6 +43,7 @@ jobs:
         run: python src/check.py
 
       - name: Commit updated watchlist
+        if: ${{ github.event.inputs.test_notification != 'true' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
